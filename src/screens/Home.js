@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
         color: '#fff',
         position: 'absolute',
         top: -8,
-        left: 11,
+        left: 10,
     }
 })
 
