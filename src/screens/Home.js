@@ -1,29 +1,58 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, View, Image, Text, TouchableOpacity } from 'react-native';
 import { useNavigation } from "@react-navigation/native";
 import TodoList from "../components/TodoList";
-import todosData from "../data/todos.js"
+import todosData from "../data/todos.js";
+import { useDispatch, useSelector } from "react-redux";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { hideCompletedReducer, setTodosReducer } from "../redux/dotosSlice";
 
 const Home = () => {
 
-    const [localData, SetLocalData] = useState(
-        todosData.sort((a, b) => { return a.isCompleted - b.isCompleted })
-    )
-
+    /*    const [localData, SetLocalData] = useState(
+            todosData.sort((a, b) => { return a.isCompleted - b.isCompleted })
+        )
+     */
     const [isHidden, setIsHidden] = useState(false)
     const Navigation = useNavigation()
+    const dispatch = useDispatch()
 
+    const todos = useSelector(state => state.todos.todos)
 
-
-    const HandleHidePress = () => {
+    const HandleHidePress = async () => {
         if (isHidden) {
             setIsHidden(false)
-            SetLocalData(todosData.sort((a, b) => { return a.isCompleted - b.isCompleted }))
-        } else {
-            setIsHidden(!isHidden)
-            SetLocalData(localData.filter(todo => !todo.isCompleted))
+            const todos = await AsyncStorage.getItem('@Todos')
+            if (todos !== null) {
+                dispatch(setTodosReducer(JSON.parse(todos)))
+            }
+            return
         }
+        dispatch(hideCompletedReducer())
+        setIsHidden(true)
+        /*         if (isHidden) {
+                    setIsHidden(false)
+                    SetLocalData(todosData.sort((a, b) => { return a.isCompleted - b.isCompleted }))
+                } else {
+                    setIsHidden(!isHidden)
+                    SetLocalData(localData.filter(todo => !todo.isCompleted))
+                } */
     }
+
+    useEffect(() => {
+        const getTodos = async () => {
+            try {
+                const todos = await AsyncStorage.getItem('@Todos')
+                if (todos !== null) {
+                    dispatch(setTodosReducer(JSON.parse(todos)))
+                }
+            } catch (e) {
+                console.log(e);
+            }
+        }
+        getTodos()
+    }, [])
+
     return (
         <View style={styles.container}>
             <Image
@@ -40,12 +69,12 @@ const Home = () => {
                 </TouchableOpacity>
             </View>
             {/* TAREAS PARA HOY */}
-            <TodoList todosData={localData.filter(todo => todo.isToday)} />
+            <TodoList todosData={todos.filter(todo => todo.isToday)} />
             <Text style={styles.title}>Tomorrow</Text>
             {/* TAREAS PARA MAÑANA */}
-            <TodoList todosData={todosData.filter(todo => !todo.isToday)} />
+            <TodoList todosData={todos.filter(todo => !todo.isToday)} />
             <TouchableOpacity
-                onPress={()=>{Navigation.navigate('Add')}}
+                onPress={() => { Navigation.navigate('Add') }}
                 style={styles.button}
             >
                 <Text style={styles.plus}>+</Text>

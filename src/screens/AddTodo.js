@@ -1,14 +1,46 @@
 import React, { useState } from "react";
 import { View, TouchableOpacity, Text, StyleSheet, TextInput, Switch, Platform, Button } from "react-native";
 import DateTimePicker from '@react-native-community/datetimepicker'
+//useDispatch = para poder usar los reducer dentro de este componente
+//useSelector = para acceder al estado que tenemos en redux
+import { useDispatch, useSelector } from "react-redux";
+//Nuestros reducer
+import { addTodoReducer } from "../redux/dotosSlice";
+//Para guarder los todos
+import AsyncStorage from "@react-native-async-storage/async-storage";
+//Para navegar en todo la navegación de la aplicación
+import { useNavigation } from "@react-navigation/native";
 
 const AddTodo = () => {
 
-    const [name, setName] = useState('')
+    const [task, setTask] = useState('')
     const [date, setDate] = useState(new Date())
     const [isToday, setIsToday] = useState(false)
     const [show, setShow] = useState(false)
     const [text, setText] = useState('')
+    //Acceder al estado de redux (Lita de todos)
+    const listTodos = useSelector(state => state.todos.todos)
+
+    const dispatch = useDispatch()
+    const navigation = useNavigation()
+
+    const addTodo = async () => {
+        const newTodo = {
+            id: Math.floor(Math.random() * 1000000),
+            name: task,
+            hour: date.toString(),
+            isToday : isToday,
+            isCompleted : false,
+        }
+        try {
+            await AsyncStorage.setItem('@Todos', JSON.stringify([...listTodos, newTodo]))
+            dispatch(addTodoReducer(newTodo))
+            console.log('Todo saved correctly')
+            navigation.goBack()
+        } catch (e) {
+            console.log(e)
+        }
+    }
 
     const showPicker = () => {
         setShow(true);
@@ -27,7 +59,6 @@ const AddTodo = () => {
         setText(fDate + '\n' + fTime)
 
         console.log(fDate + '(' + fTime + ')')
-        //console.log(value);
     }
 
     return (
@@ -40,7 +71,7 @@ const AddTodo = () => {
                     style={styles.textInput}
                     placeholder="Task"
                     placeholderTextColor='#00000030'
-                    onChange={(text) => setName(text)}
+                    onChangeText={newText => setTask(newText)}
                 ></TextInput>
             </View>
             {/* HORA */}
@@ -72,6 +103,7 @@ const AddTodo = () => {
             {/* BOTÓN DE GRABAR */}
             <TouchableOpacity
                 style={styles.button}
+                onPress={addTodo}
             >
                 <Text style={{ color: 'white' }} >Done</Text>
             </TouchableOpacity>
