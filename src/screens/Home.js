@@ -1,11 +1,22 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, View, Image, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Image, Text, TouchableOpacity, Platform } from 'react-native';
 import { useNavigation } from "@react-navigation/native";
 import TodoList from "../components/TodoList";
 import todosData from "../data/todos.js";
 import { useDispatch, useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { hideCompletedReducer, setTodosReducer } from "../redux/dotosSlice";
+import * as Notifications from 'expo-notifications'
+import * as Device from "expo-device";
+import moment from "moment";
+
+Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+    })
+})
 
 const Home = () => {
 
@@ -14,6 +25,7 @@ const Home = () => {
         )
      */
     const [isHidden, setIsHidden] = useState(false)
+    const [expoPushToken, setExpoPushToken] = useState('')
     const Navigation = useNavigation()
     const dispatch = useDispatch()
 
@@ -40,6 +52,7 @@ const Home = () => {
     }
 
     useEffect(() => {
+        registerForPushNotificationsAsync().then(token => { setExpoPushToken(token) })
         const getTodos = async () => {
             try {
                 const todos = await AsyncStorage.getItem('@Todos')
@@ -52,6 +65,36 @@ const Home = () => {
         }
         getTodos()
     }, [])
+
+    const registerForPushNotificationsAsync = async () => {
+        let token
+        if (Device.isDevice) {
+            const { status: existingStatus } = await Notifications.getPermissionsAsync()
+            let finalStatus = existingStatus
+            if (existingStatus !== 'granted') {
+                const { status } = await Notifications.requestPermissionsAsync()
+                finalStatus = status
+            }
+            if (finalStatus !== 'granted') {
+                alert('Failed to get push token for push notifications')
+                return
+            }
+            token = (await Notifications.getExpoPushTokenAsync()).data
+            console.log(token)
+        } else {
+            alert('Must use physical device for push notifications')
+            return
+        }
+        if (Platform.OS === 'android') {
+            Notifications.setNotificationChannelAsync('default', {
+                name: 'default',
+                importance: Notifications.AndroidImportance.MAX,
+                vibrationPattern: [0, 250, 250, 250],
+                lightColor: '#FF231F7C',
+            })
+        }
+        return token
+    }
 
     return (
         <View style={styles.container}>

@@ -10,6 +10,8 @@ import { addTodoReducer } from "../redux/dotosSlice";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 //Para navegar en todo la navegación de la aplicación
 import { useNavigation } from "@react-navigation/native";
+//Manejo de las notificaciones
+import * as Notifications from 'expo-notifications'
 
 const AddTodo = () => {
 
@@ -18,6 +20,7 @@ const AddTodo = () => {
     const [isToday, setIsToday] = useState(false)
     const [show, setShow] = useState(false)
     const [text, setText] = useState('')
+    const [withAlert, setWithAlert] = useState(false)
     //Acceder al estado de redux (Lita de todos)
     const listTodos = useSelector(state => state.todos.todos)
 
@@ -28,14 +31,17 @@ const AddTodo = () => {
         const newTodo = {
             id: Math.floor(Math.random() * 1000000),
             name: task,
-            hour: date.toString(),
-            isToday : isToday,
-            isCompleted : false,
+            hour: isToday ? date.toString() : new Date(date).getDate() + 24 * 60 * 60 * 1000,
+            isToday: isToday,
+            isCompleted: false,
         }
         try {
             await AsyncStorage.setItem('@Todos', JSON.stringify([...listTodos, newTodo]))
             dispatch(addTodoReducer(newTodo))
             console.log('Todo saved correctly')
+            if(withAlert){
+            }
+            await todoNotifications(newTodo)
             navigation.goBack()
         } catch (e) {
             console.log(e)
@@ -59,6 +65,22 @@ const AddTodo = () => {
         setText(fDate + '\n' + fTime)
 
         console.log(fDate + '(' + fTime + ')')
+    }
+
+    const todoNotifications = async (todo) => {
+        const trigger = new Date(todo.hour)
+        try {
+            await Notifications.scheduleNotificationAsync({
+                content: {
+                    title: 'Es la Hour',
+                    body: todo.name,
+                },
+                trigger,
+            })
+            console.log('Notification was schedule');
+        } catch (e) {
+            alert('The notification failed to schedule, make sure the hour is valid')
+        }
     }
 
     return (
@@ -91,6 +113,7 @@ const AddTodo = () => {
                         style={{ width: '80%' }}
                     ></DateTimePicker>
                 )}
+
             </View>
             {/* PARA HOY */}
             <View style={styles.inputContainer}>
@@ -100,12 +123,21 @@ const AddTodo = () => {
                     onValueChange={(value) => { setIsToday(value) }}
                 ></Switch>
             </View>
+            {/* SWITCH DE ALERTA */}
+            <View style={styles.inputContainer}>
+                <Text style={styles.inputTitle}>Alert</Text>
+                <Switch
+                    value={withAlert}
+                    onValueChange={(value) => { setWithAlert(value) }}
+                ></Switch>
+            </View>
+            <Text style={{color:'#00000060'}}>You will receive an alert at the time you set for this reminder</Text>
             {/* BOTÓN DE GRABAR */}
             <TouchableOpacity
                 style={styles.button}
                 onPress={addTodo}
             >
-                <Text style={{ color: 'white' }} >Done</Text>
+                <Text style={{ color: 'white', fontSize: 12, maxWidth:'85%' }} >Done</Text>
             </TouchableOpacity>
             <Text style={{ color: '#00000060' }}>If you disable today, the task will be considered as tomorrow</Text>
         </View>
